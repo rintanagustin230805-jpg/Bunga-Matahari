@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Sunflower Field Cat</title>
+<style>
+html, body {
+  margin: 0;
+  overflow: hidden;
+  background: #87ceeb;
+}
+canvas { display: block; }
+
+#dayNightBtn {
+  position: absolute;
+  top: 20px;
+  left: 150px;
+  z-index: 10;
+  padding: 10px 20px;
+  font-size: 16px;
+  background: #fff;
+  border: 2px solid #63a65f;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-right: 10px;
+}
+#dayNightBtn:hover {
+  background: #63a65f;
+  color: #fff;
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<audio id="bgm" loop>
+  <source src="Cute.mp3" type="audio/mpeg">
+</audio>
+
+<button id="dayNightBtn">Malam</button>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const bgm = document.getElementById("bgm");
+bgm.volume = 1.0;
+
+// ✅ Musik mulai saat klik pertama di mana saja
+let musicStarted = false;
+document.addEventListener("click", () => {
+  if (!musicStarted) {
+    bgm.play().catch(()=>{});
+    musicStarted = true;
+  }
+});
+
+// Day/Night toggle
+let isDay = true;
+const dayNightBtn = document.getElementById("dayNightBtn");
+dayNightBtn.addEventListener("click", () => {
+  isDay = !isDay;
+  dayNightBtn.textContent = isDay ? "Malam" : "Siang";
+});
+
+// Resize
+function resize(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+addEventListener("resize", resize);
+resize();
+
+const lerp = (a,b,t) => a + (b-a)*t;
+
+// ================= SUN & MOON =================
+let sunAngle = 0;
+function sky(){
+  const g = ctx.createLinearGradient(0,0,0,canvas.height);
+  if(isDay){
+    g.addColorStop(0,"#87CEEB");
+    g.addColorStop(1,"#e8f6e8");
+  } else {
+    g.addColorStop(0,"#0b0c33");
+    g.addColorStop(1,"#1a1a40");
+  }
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+
+function sun(){
+  if(!isDay) return;
+  const x = canvas.width-120, y = 120;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(sunAngle);
+  for(let i=0;i<12;i++){
+    ctx.rotate(Math.PI/6);
+    ctx.fillStyle = "rgba(255,215,0,0.5)";
+    ctx.fillRect(40,-3,25,6);
+  }
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(x,y,40,0,Math.PI*2);
+  ctx.fillStyle="gold";
+  ctx.fill();
+}
+
+function moon(){
+  if(isDay) return;
+  const x = canvas.width-120, y = 120;
+  ctx.beginPath();
+  ctx.arc(x, y, 40, 0, Math.PI*2);
+  ctx.fillStyle = "rgba(255, 255, 200, 0.8)";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x+10, y-10, 40, 0, Math.PI*2);
+  ctx.fillStyle = "#0b0c33";
+  ctx.fill();
+}
+
+// ================= STARS =================
+const stars = Array.from({length:100},()=>({
+  x: Math.random()*canvas.width,
+  y: Math.random()*canvas.height*0.5,
+  r: Math.random()*1.5+0.5
+}));
+function drawStars(){
+  if(isDay) return;
+  ctx.fillStyle="#fff";
+  stars.forEach(s=>{
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fill();
+  });
+}
+
+// ================= CLOUDS =================
+const clouds = Array.from({length:8},() => ({
+  x: Math.random()*canvas.width,
+  y: Math.random()*200+30,
+  s: Math.random()*0.3+0.2
+}));
+function cloud(c){
+  ctx.fillStyle="white";
+  ctx.beginPath();
+  ctx.arc(c.x,c.y,25,0,Math.PI*2);
+  ctx.arc(c.x+30,c.y-10,30,0,Math.PI*2);
+  ctx.arc(c.x+60,c.y,25,0,Math.PI*2);
+  ctx.fill();
+}
+
+// ================= FLOWERS =================
+let flowers = [];
+function genFlowers(){
+  flowers = [];
+  for(let x=0;x<canvas.width;x+=50){
+    for(let y=canvas.height*0.55;y<canvas.height;y+=50){
+      flowers.push({x:x+Math.random()*20, y, s:Math.random()*6});
+    }
+  }
+}
+genFlowers();
+canvas.addEventListener("click", e => {
+  if(e.clientY > canvas.height*0.55){
+    flowers.push({x:e.clientX, y:e.clientY, s:Math.random()*6});
+  }
+});
+function flower(f){
+  const sx = Math.sin(f.s)*6;
+  if(isDay){
+    f.s += 0.02;
+    ctx.strokeStyle="#3c8f3c";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(f.x,f.y);
+    ctx.lineTo(f.x+sx,f.y-35);
+    ctx.stroke();
+    for(let i=0;i<10;i++){
+      const a = i*Math.PI/5;
+      ctx.beginPath();
+      ctx.arc(f.x+sx+Math.cos(a)*10,f.y-35+Math.sin(a)*10,6,0,Math.PI*2);
+      ctx.fillStyle="#ffd966";
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.arc(f.x+sx,f.y-35,6,0,Math.PI*2);
+    ctx.fillStyle="#6b3e1e";
+    ctx.fill();
+  } else {
+    ctx.strokeStyle="#2f4f2f";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(f.x,f.y);
+    ctx.lineTo(f.x+sx*0.3,f.y-20);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(f.x+sx*0.3,f.y-20,3,0,Math.PI*2);
+    ctx.fillStyle="#444";
+    ctx.fill();
+  }
+}
+
+// ================= TREE & OWL =================
+function drawTree(){
+  const trunkX = 100, trunkY = canvas.height*0.55;
+  ctx.fillStyle = "#654321";
+  ctx.fillRect(trunkX, trunkY-120, 20, 120);
+  ctx.fillStyle = "#228B22";
+  ctx.beginPath();
+  ctx.arc(trunkX+10, trunkY-120, 40,0,Math.PI*2);
+  ctx.fill();
+}
+function drawOwl(){
+  if(isDay) return;
+  const trunkX = 100, trunkY = canvas.height*0.55 -120;
+  ctx.fillStyle="#664422";
+  ctx.beginPath();
+  ctx.ellipse(trunkX+10,trunkY+20,10,15,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle="#fff";
+  ctx.beginPath();
+  ctx.arc(trunkX+6,trunkY+15,3,0,Math.PI*2);
+  ctx.arc(trunkX+14,trunkY+15,3,0,Math.PI*2);
+  ctx.fill();
+}
+
+// ================= BUTTERFLY =================
+const butterflies = Array.from({length:10}, () => ({
+  x: Math.random()*canvas.width,
+  y: Math.random()*canvas.height*0.5,
+  a: Math.random()*6,
+  s: Math.random()*0.8+0.4,
+  c: `hsl(${Math.random()*360},80%,70%)`
+}));
+function butterfly(b){
+  if(!isDay) return;
+  b.a += 0.05;
+  b.x += Math.cos(b.a)*b.s;
+  b.y += Math.sin(b.a*1.3)*b.s;
+  ctx.fillStyle = b.c;
+  ctx.beginPath();
+  ctx.ellipse(b.x,b.y,6,4,0,0,Math.PI*2);
+  ctx.ellipse(b.x+8,b.y,6,4,0,0,Math.PI*2);
+  ctx.fill();
+}
+
+// ================= CAT =================
+let cat = {x: canvas.width/2, y: canvas.height*0.6, tx: canvas.width/2, ty: canvas.height*0.6, tail:0};
+let mouseX = canvas.width/2;
+let mouseY = canvas.height/2;
+addEventListener("mousemove", e => { 
+  cat.tx=e.clientX; 
+  cat.ty=e.clientY; 
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+function catDraw(){
+  cat.x = lerp(cat.x,cat.tx,0.05);
+  cat.y = lerp(cat.y,cat.ty,0.05);
+  cat.tail+=0.15;
+  ctx.save();
+  ctx.translate(cat.x,cat.y);
+
+  ctx.strokeStyle="#fff"; ctx.lineWidth=6;
+  ctx.beginPath();
+  ctx.moveTo(-35,10);
+  ctx.quadraticCurveTo(isDay?-55:-35,10+Math.sin(cat.tail)*15,-45,30);
+  ctx.stroke();
+
+  ctx.fillStyle="#fff";
+  ctx.beginPath();
+  ctx.ellipse(0,15,30,20,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0,-10,18,0,Math.PI*2); ctx.fill();
+
+  ctx.fillStyle="#000";
+  ctx.beginPath();
+  ctx.arc(-5,-10,2.5,0,Math.PI*2);
+  ctx.arc(5,-10,2.5,0,Math.PI*2);
+  ctx.fill();
+
+  const earOffsetX = lerp(0,(mouseX-cat.x)/20,0.1);
+  const earOffsetY = lerp(0,(mouseY-cat.y)/20,0.1);
+  ctx.fillStyle="#fff";
+  ctx.beginPath();
+  ctx.moveTo(-12+earOffsetX,-28+earOffsetY); ctx.lineTo(-20+earOffsetX,-45+earOffsetY); ctx.lineTo(-4+earOffsetX,-28+earOffsetY); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(12+earOffsetX,-28+earOffsetY); ctx.lineTo(20+earOffsetX,-45+earOffsetY); ctx.lineTo(4+earOffsetX,-28+earOffsetY); ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(-18,-5); ctx.lineTo(-35,-5);
+  ctx.moveTo(-18,0); ctx.lineTo(-35,5);
+  ctx.moveTo(18,-5); ctx.lineTo(35,-5);
+  ctx.moveTo(18,0); ctx.lineTo(35,5);
+  ctx.strokeStyle="#000";
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// ================= MAIN LOOP =================
+function animate(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  sky(); sun(); moon();
+  drawStars();
+  clouds.forEach(c=>{c.x+=c.s;if(c.x>canvas.width+80)c.x=-80; cloud(c);});
+  butterflies.forEach(butterfly);
+  ctx.fillStyle=isDay?"#63a65f":"#364635";
+  ctx.fillRect(0,canvas.height*0.55,canvas.width,canvas.height);
+  drawTree(); drawOwl();
+  flowers.forEach(flower); catDraw();
+  sunAngle+=0.002;
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+<!-- ===== WOOL CURSOR ADD-ON (TAMBAHAN SAJA) ===== -->
+<canvas id="woolCanvas" style="
+position:fixed;
+top:0;
+left:0;
+pointer-events:none;
+z-index:50;"></canvas>
+
+<script>
+const woolCanvas = document.getElementById("woolCanvas");
+const wctx = woolCanvas.getContext("2d");
+
+function resizeWool(){
+ woolCanvas.width = innerWidth;
+ woolCanvas.height = innerHeight;
+}
+resizeWool();
+addEventListener("resize", resizeWool);
+
+let wx = innerWidth/2;
+let wy = innerHeight/2;
+
+// posisi mouse
+addEventListener("mousemove", e=>{
+ wx = e.clientX;
+ wy = e.clientY;
+});
+
+// animasi benang
+let t = 0;
+
+function drawWool(){
+ wctx.clearRect(0,0,woolCanvas.width,woolCanvas.height);
+
+ t += 0.05;
+
+ // bola wol
+ wctx.beginPath();
+ wctx.arc(wx, wy, 14, 0, Math.PI*2);
+ wctx.fillStyle = "#ff6aa2";
+ wctx.fill();
+
+ // garis benang melingkar
+ for(let i=0;i<4;i++){
+  wctx.beginPath();
+  wctx.arc(wx, wy, 6+i*2, t+i, t+i+Math.PI);
+  wctx.strokeStyle = "#d94f87";
+  wctx.lineWidth = 1.5;
+  wctx.stroke();
+ }
+
+ // ekor benang
+ wctx.beginPath();
+ wctx.moveTo(wx, wy+14);
+ wctx.quadraticCurveTo(wx-20, wy+30, wx-10, wy+50);
+ wctx.strokeStyle="#d94f87";
+ wctx.lineWidth=2;
+ wctx.stroke();
+
+ requestAnimationFrame(drawWool);
+}
+drawWool();
+</script>
+<!-- ===== CAT FISH GAME UPGRADE ===== -->
+
+<button id="fishBtn" style="
+position:absolute;
+top:20px;
+left:20px;
+z-index:60;
+padding:10px 15px;
+cursor:pointer;">🐟 Game Ikan</button>
+
+<div style="
+position:absolute;
+top:20px;
+right:20px;
+color:white;
+font-family:Arial;
+z-index:60;
+text-align:right;">
+Skor: <span id="fishScore">0</span><br>
+Waktu: <span id="fishTime">45</span><br>
+Level: <span id="fishLevel">1</span>
+</div>
+
+<audio id="meow">
+<source src="https://www.soundjay.com/animal/cat-meow-2.mp3">
+</audio>
+
+<canvas id="fishCanvas" style="
+position:fixed;
+top:0;
+left:0;
+pointer-events:none;
+z-index:55;"></canvas>
+
+<script>
+const fishCanvas=document.getElementById("fishCanvas");
+const fctx=fishCanvas.getContext("2d");
+const meow=document.getElementById("meow");
+
+function resizeFish(){
+ fishCanvas.width=innerWidth;
+ fishCanvas.height=innerHeight;
+}
+resizeFish();
+addEventListener("resize",resizeFish);
+
+// ===== DATA =====
+let fishes=[];
+let fishScore=0;
+let fishTime=45;
+let fishLevel=1;
+let fishPlaying=false;
+let fishTimer;
+
+const scoreEl=document.getElementById("fishScore");
+const timeEl=document.getElementById("fishTime");
+const levelEl=document.getElementById("fishLevel");
+
+// spawn ikan
+function spawnFish(){
+ const typeRand=Math.random();
+
+ let type="normal";
+ if(typeRand<0.15) type="gold";
+ else if(typeRand<0.25) type="bomb";
+
+ fishes.push({
+  x:Math.random()*fishCanvas.width,
+  y:-20,
+  s:2+Math.random()*2+fishLevel*0.5,
+  type
+ });
+}
+
+// start
+fishBtn.onclick=()=>{
+ fishScore=0;
+ fishTime=45;
+ fishLevel=1;
+ fishes=[];
+ fishPlaying=true;
+
+ scoreEl.textContent=0;
+ timeEl.textContent=45;
+ levelEl.textContent=1;
+
+ clearInterval(fishTimer);
+ fishTimer=setInterval(()=>{
+  fishTime--;
+  timeEl.textContent=fishTime;
+
+  // naik level tiap 15 detik
+  if(fishTime%15==0){
+   fishLevel++;
+   levelEl.textContent=fishLevel;
+  }
+
+  if(fishTime<=0){
+   fishPlaying=false;
+   clearInterval(fishTimer);
+   alert("😺 Skor akhir: "+fishScore);
+  }
+ },1000);
+};
+
+// ===== LOOP =====
+function fishLoop(){
+ fctx.clearRect(0,0,fishCanvas.width,fishCanvas.height);
+
+ if(fishPlaying){
+
+  if(Math.random()<0.05) spawnFish();
+
+  fishes.forEach(f=>{
+   f.y+=f.s;
+
+   // ===== GAMBAR =====
+   if(f.type=="gold"){
+    fctx.fillStyle="gold";
+   }else if(f.type=="bomb"){
+    fctx.fillStyle="black";
+   }else{
+    fctx.fillStyle="#ff9f43";
+   }
+
+   // badan
+   fctx.beginPath();
+   fctx.ellipse(f.x,f.y,14,8,0,0,Math.PI*2);
+   fctx.fill();
+
+   // ekor
+   fctx.beginPath();
+   fctx.moveTo(f.x-14,f.y);
+   fctx.lineTo(f.x-22,f.y-6);
+   fctx.lineTo(f.x-22,f.y+6);
+   fctx.fill();
+
+   // ===== DETEKSI KUCING =====
+   if(Math.hypot(f.x-cat.x,f.y-cat.y)<30){
+
+    if(f.type=="gold"){
+     fishScore+=5;
+     meow.play();
+    }
+    else if(f.type=="bomb"){
+     fishScore=Math.max(0,fishScore-3);
+    }
+    else{
+     fishScore++;
+     meow.play();
+    }
+
+    scoreEl.textContent=fishScore;
+    f.y=fishCanvas.height+100;
+   }
+  });
+
+  fishes=fishes.filter(f=>f.y<fishCanvas.height+40);
+ }
+
+ requestAnimationFrame(fishLoop);
+}
+fishLoop();
+</script>
+
+</body>
+</html>
+
+
+
